@@ -9,12 +9,14 @@ def test_meta():
     body = client.get("/api/meta").json()
     assert body["first_delivery_date"] == "2026-01-02"
     assert body["last_delivery_date"] == "2026-02-01"
+    assert body["default_cutoff"] == "09:20"
 
 
-def test_day_forecast_only_uses_forecasts_published_before_the_cutoff():
-    body = client.get("/api/forecast", params={"delivery_date": "2026-01-15", "cutoff": "12:00"}).json()
+def test_day_forecast_only_uses_forecasts_published_before_the_default_cutoff():
+    body = client.get("/api/forecast", params={"delivery_date": "2026-01-15"}).json()
+    assert body["cutoff"] == "09:20"
     assert len(body["points"]) == 24
-    assert all(p["publish_time"] <= "2026-01-14T12:00:00Z" for p in body["points"])
+    assert all(p["publish_time"] <= "2026-01-14T09:20:00Z" for p in body["points"])
     assert all(p["actual_mw"] is not None for p in body["points"])
 
 

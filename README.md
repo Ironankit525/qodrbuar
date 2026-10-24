@@ -67,7 +67,7 @@ scales to zero after a few minutes without traffic, so the first request after i
 
 **Decision-time forecast.** WINDFOR publishes about 8 forecasts a day for the same target hours (`publishTime` differs).
 A buyer deciding at a deadline can only use forecasts published before it. For each delivery hour the app picks
-the **latest forecast with `publishTime` ≤ the deadline on the previous day** (default 12:00 UTC, adjustable in the UI).
+the **latest forecast with `publishTime` ≤ the deadline on the previous day** (default 09:20 UTC, adjustable in the UI).
 
 **Accuracy.** That forecast is compared with the actual generation. Error = forecast − actual, so a positive error
 means wind was over-forecast. Metrics: mean absolute error (MAE), RMSE, bias, 95th-percentile absolute error, and MAE
@@ -78,8 +78,12 @@ figure for the whole day and the raw (uncorrected) forecast, and shows the Janua
 
 ### Assumptions and choices
 
-- **Decision deadline: 12:00 UTC on the day before delivery.** The brief does not specify it; this is an assumption.
-  Results change little with other morning deadlines (MAE about 2.0 GW at 06:00–11:00 vs 1.9 GW at 12:00).
+- **Decision deadline: 09:20 UTC on the day before delivery.** The brief does not specify it. GB power for the next
+  day is traded in two day-ahead auctions, which close at about 09:20 (EPEX SPOT) and 09:50 (Nord Pool N2EX) UK
+  time, the same as UTC in January ([Nord Pool](https://support.nordpoolgroup.com/support/solutions/articles/8000088463-about-the-day-ahead-gb-auction),
+  [Montel](https://montel.energy/assets/phil-hewitt---montel-analytics.pdf)). The default uses the earlier one, so the
+  forecast shown is one the buyer really had for either auction. Other morning deadlines give similar results (MAE
+  2.0 GW for any deadline from 06:00 to 11:00); a later deadline such as 12:00 would wrongly use the 11:30 forecast.
 - **Delivery days 2 Jan – 1 Feb 2026** (744 hours): the delivery days for decisions made in January.
 - **Hourly comparison.** WINDFOR is hourly and FUELHH half-hourly, so actuals are averaged over the two half-hours of
   each hour; hours missing either half-hour are dropped.
@@ -89,14 +93,14 @@ figure for the whole day and the raw (uncorrected) forecast, and shows the Janua
 - **Data is stored locally** (Parquet) rather than fetched per request: the scope is a fixed month, so the app is fast
   and does not depend on Elexon being reachable.
 
-### Findings for January 2026 (12:00 deadline)
+### Findings for January 2026 (09:20 deadline)
 
 | Metric | Value |
 |---|---|
-| Mean absolute error | 1,901 MW (16.8% of mean wind) |
-| RMSE | 2,359 MW |
-| Bias | +1,687 MW (forecast too high; over-forecast in 85% of hours) |
-| 95th-percentile absolute error | 4,556 MW |
+| Mean absolute error | 2,039 MW (18.1% of mean wind) |
+| RMSE | 2,505 MW |
+| Bias | +1,748 MW (forecast too high; over-forecast in 85% of hours) |
+| 95th-percentile absolute error | 5,283 MW |
 
 Error grows with lead time (about 1.7 GW under 6 h ahead to about 2.4 GW at 60 h+). These are one month of data and
 the cause of the bias has not been investigated; treat them as pilot findings, not general rules.
@@ -151,7 +155,7 @@ the cause of the bias has not been investigated; treat them as pilot findings, n
 | `GET /api/accuracy/by-hour?cutoff=` | Metrics per hour of day |
 | `GET /api/accuracy/by-horizon` | Metrics by forecast lead time (all forecasts; independent of the deadline) |
 
-`cutoff` is `HH:MM` (UTC) on the day before delivery; default `12:00`. Interactive docs at `/docs`.
+`cutoff` is `HH:MM` (UTC) on the day before delivery; default `09:20`. Interactive docs at `/docs`.
 
 ## Tests
 

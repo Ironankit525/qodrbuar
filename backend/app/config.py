@@ -12,8 +12,9 @@ ELEXON_BASE_URL = "https://data.elexon.co.uk/bmrs/api/v1"
 DELIVERY_START = "2026-01-02T00:00:00Z"
 DELIVERY_END = "2026-02-02T00:00:00Z"
 
-# Day-ahead decision deadline: time of day (UTC) on the day before delivery.
-DEFAULT_CUTOFF = "12:00"
+# Day-ahead decision deadline: time of day (UTC) on the day before delivery. 09:20 is when the
+# earlier of the two GB day-ahead auctions (EPEX SPOT) closes; N2EX closes at 09:50.
+DEFAULT_CUTOFF = "09:20"
 
 # Ingestion windows (by Elexon publish time). Forecasts start earlier so that
 # the first delivery day has forecasts published the day before.
