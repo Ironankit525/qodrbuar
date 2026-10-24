@@ -9,7 +9,7 @@ Data: Elexon BMRS only, national level, January 2026 decisions.
 [`FUELHH`](https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/FUELHH/stream) (actuals, `fuelType = WIND`) and
 [`WINDFOR`](https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/WINDFOR/stream) (forecasts).
 
-**Live app:** _to be added after deployment_ (hosted on Vercel, see [Deploy on Vercel](#deploy-on-vercel))
+**Live app:** <https://qodrbuar.vercel.app> (hosted on Vercel; the first load after a few idle minutes can take a few seconds)
 
 ## Start the application
 
