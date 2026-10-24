@@ -54,9 +54,11 @@ The January 2026 data is committed in `backend/data/`, so no setup is needed. To
 
 ## Deploy on Vercel
 
-Vercel builds the container straight from the GitHub repo using `Dockerfile.vercel` (Vercel Container Runtime, beta):
+Vercel builds the container straight from the GitHub repo using `Dockerfile.vercel` (Vercel Container Runtime, beta).
+`vercel.json` tells Vercel to deploy only that container as a single service and send all traffic to it (the
+container already serves both the API and the website):
 
-1. In Vercel choose **Add New → Project** and import this repository. Vercel detects `Dockerfile.vercel`.
+1. In Vercel choose **Add New → Project** and import this repository.
 2. Under **Environment Variables** add `PORT` = `8000` (Vercel's default is port 80; the app listens on `$PORT`).
 3. Deploy. Every push to `main` redeploys.
 
@@ -111,6 +113,7 @@ the cause of the bias has not been investigated; treat them as pilot findings, n
 .
 ├── Dockerfile               Multi-stage build: React build, Python runtime, optional `test` target
 ├── Dockerfile.vercel        Same as Dockerfile; the name Vercel looks for
+├── vercel.json              Vercel config: deploy the container as the only service
 ├── docker-compose.yml       `docker compose up` -> http://localhost:8080
 ├── .dockerignore
 ├── .gitignore
