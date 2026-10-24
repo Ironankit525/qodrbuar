@@ -9,7 +9,7 @@ Data: Elexon BMRS only, national level, January 2026 decisions.
 [`FUELHH`](https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/FUELHH/stream) (actuals, `fuelType = WIND`) and
 [`WINDFOR`](https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/WINDFOR/stream) (forecasts).
 
-**Live app:** <https://qodrbuar.vercel.app> (hosted on Vercel; the first load after a few idle minutes can take a few seconds)
+**Live app:** _to be added after deployment_
 
 ## Start the application
 
@@ -52,24 +52,11 @@ If the backend is on another port: `API_PROXY_TARGET=http://127.0.0.1:8765 npm r
 The January 2026 data is committed in `backend/data/`, so no setup is needed. To re-download it from Elexon:
 `cd backend && python -m scripts.ingest`.
 
-## Deploy on Vercel
-
-Vercel builds the container straight from the GitHub repo using `Dockerfile.vercel` (Vercel Container Runtime, beta).
-`vercel.json` tells Vercel to deploy only that container as a single service and send all traffic to it (the
-container already serves both the API and the website):
-
-1. In Vercel choose **Add New → Project** and import this repository.
-2. Under **Environment Variables** add `PORT` = `8000` (Vercel's default is port 80; the app listens on `$PORT`).
-3. Deploy. Every push to `main` redeploys.
-
-`Dockerfile.vercel` is a copy of `Dockerfile` (Vercel only looks for that exact name). The container is stateless and
-scales to zero after a few minutes without traffic, so the first request after idle time can be slow.
-
 ## How it works
 
 **Decision-time forecast.** WINDFOR publishes about 8 forecasts a day for the same target hours (`publishTime` differs).
 A buyer deciding at a deadline can only use forecasts published before it. For each delivery hour the app picks
-the **latest forecast with `publishTime` ≤ the deadline on the previous day** (default 09:20 UTC, adjustable in the UI).
+the **latest forecast with `publishTime` ≤ the deadline on the previous day** (default 12:00 UTC, adjustable in the UI).
 
 **Accuracy.** That forecast is compared with the actual generation. Error = forecast − actual, so a positive error
 means wind was over-forecast. Metrics: mean absolute error (MAE), RMSE, bias, 95th-percentile absolute error, and MAE
@@ -80,12 +67,8 @@ figure for the whole day and the raw (uncorrected) forecast, and shows the Janua
 
 ### Assumptions and choices
 
-- **Decision deadline: 09:20 UTC on the day before delivery.** The brief does not specify it. GB power for the next
-  day is traded in two day-ahead auctions, which close at about 09:20 (EPEX SPOT) and 09:50 (Nord Pool N2EX) UK
-  time, the same as UTC in January ([Nord Pool](https://support.nordpoolgroup.com/support/solutions/articles/8000088463-about-the-day-ahead-gb-auction),
-  [Montel](https://montel.energy/assets/phil-hewitt---montel-analytics.pdf)). The default uses the earlier one, so the
-  forecast shown is one the buyer really had for either auction. Other morning deadlines give similar results (MAE
-  2.0 GW for any deadline from 06:00 to 11:00); a later deadline such as 12:00 would wrongly use the 11:30 forecast.
+- **Decision deadline: 12:00 UTC on the day before delivery.** The brief does not specify it; this is an assumption.
+  Results change little with other morning deadlines (MAE about 2.0 GW at 06:00–11:00 vs 1.9 GW at 12:00).
 - **Delivery days 2 Jan – 1 Feb 2026** (744 hours): the delivery days for decisions made in January.
 - **Hourly comparison.** WINDFOR is hourly and FUELHH half-hourly, so actuals are averaged over the two half-hours of
   each hour; hours missing either half-hour are dropped.
@@ -95,14 +78,14 @@ figure for the whole day and the raw (uncorrected) forecast, and shows the Janua
 - **Data is stored locally** (Parquet) rather than fetched per request: the scope is a fixed month, so the app is fast
   and does not depend on Elexon being reachable.
 
-### Findings for January 2026 (09:20 deadline)
+### Findings for January 2026 (12:00 deadline)
 
 | Metric | Value |
 |---|---|
-| Mean absolute error | 2,039 MW (18.1% of mean wind) |
-| RMSE | 2,505 MW |
-| Bias | +1,748 MW (forecast too high; over-forecast in 85% of hours) |
-| 95th-percentile absolute error | 5,283 MW |
+| Mean absolute error | 1,901 MW (16.8% of mean wind) |
+| RMSE | 2,359 MW |
+| Bias | +1,687 MW (forecast too high; over-forecast in 85% of hours) |
+| 95th-percentile absolute error | 4,556 MW |
 
 Error grows with lead time (about 1.7 GW under 6 h ahead to about 2.4 GW at 60 h+). These are one month of data and
 the cause of the bias has not been investigated; treat them as pilot findings, not general rules.
@@ -112,8 +95,6 @@ the cause of the bias has not been investigated; treat them as pilot findings, n
 ```
 .
 ├── Dockerfile               Multi-stage build: React build, Python runtime, optional `test` target
-├── Dockerfile.vercel        Same as Dockerfile; the name Vercel looks for
-├── vercel.json              Vercel config: deploy the container as the only service
 ├── docker-compose.yml       `docker compose up` -> http://localhost:8080
 ├── .dockerignore
 ├── .gitignore
@@ -133,16 +114,15 @@ the cause of the bias has not been investigated; treat them as pilot findings, n
 │   ├── data/                actuals.parquet, forecasts.parquet (January 2026)
 │   └── tests/               pytest: analysis logic, API, storage
 └── frontend/
-    ├── package.json, vite.config.js, .oxlintrc.json
+    ├── package.json, vite.config.ts, tsconfig*.json, .oxlintrc.json
     ├── index.html, public/favicon.svg
     └── src/
-        ├── main.jsx         Entry point
-        ├── App.jsx          Tabs and the decision-deadline control
-        ├── api.js           API client; documents the response shapes
-        ├── useApi.js        Data-fetching hook
-        ├── format.js        Number, date and unit formatting
+        ├── App.tsx          Tabs and the decision-deadline control
+        ├── api.ts           Typed API client (mirrors backend schemas)
+        ├── useApi.ts        Data-fetching hook
+        ├── format.ts        Number, date and unit formatting
         ├── index.css        Styles and light/dark colour tokens
-        ├── views/           ForecastView.jsx, AccuracyView.jsx
+        ├── views/           ForecastView.tsx, AccuracyView.tsx
         └── components/      Kpi, ChartCard, ChartTooltip, Status, BuyingCalculator
 ```
 
@@ -158,21 +138,18 @@ the cause of the bias has not been investigated; treat them as pilot findings, n
 | `GET /api/accuracy/by-hour?cutoff=` | Metrics per hour of day |
 | `GET /api/accuracy/by-horizon` | Metrics by forecast lead time (all forecasts; independent of the deadline) |
 
-`cutoff` is `HH:MM` (UTC) on the day before delivery; default `09:20`. Interactive docs at `/docs`.
+`cutoff` is `HH:MM` (UTC) on the day before delivery; default `12:00`. Interactive docs at `/docs`.
 
 ## Tests
 
 - Backend: 13 pytest tests. Analysis logic is tested on small hand-made data (including deadline boundaries and
   back-filled forecasts); the API is tested against the stored data.
-- Frontend: React (JavaScript), linted with `oxlint` (including React hook rules); no automated UI tests in the repo.
-  Every feature was checked in a browser against the Docker container, in light and dark mode and at phone width.
+- Frontend: typechecked (`tsc`) and linted (`oxlint`); no automated UI tests. Behaviour was checked manually in a browser.
 - The headline numbers were also recomputed independently from the raw Elexon responses with separate plain-Python
   code and matched the app exactly.
 
 ## Use of AI tools
 
-I used Claude (Anthropic), through the Claude Code agent, to build this project. I used it to research the Elexon
-data (FUELHH and WINDFOR), to write and review the code for both the Python backend and the React frontend, and to
-write the tests and this README. I directed the work, decided what the app should show and which features to add (for
-example the buying calculator and the day-by-day navigation), and reviewed the result in the browser. The assumptions
-above and the numbers in the findings were checked against the raw Elexon data as described under Tests.
+This project was built with AI assistance: Claude (Anthropic) via Claude Code was used to research the Elexon data,
+design the approach  and review the code, tests and this README. 
+

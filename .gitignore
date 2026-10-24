@@ -15,3 +15,7 @@ dist/
 .DS_Store
 .vscode/
 .idea/
+
+# Private notes
+understanding.md
+video.md
