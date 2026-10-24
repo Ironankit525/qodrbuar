@@ -1,0 +1,33 @@
+# --- Build the React app ---
+FROM node:22-slim AS frontend
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# --- Python base: dependencies, app code and the stored January data ---
+FROM python:3.12-slim AS backend
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+COPY backend/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/app app
+COPY backend/scripts scripts
+COPY backend/data data
+
+# --- Test target:  docker build --target test .  (fails the build if a test fails) ---
+FROM backend AS test
+COPY backend/requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
+COPY backend/tests tests
+RUN python -m pytest -q
+
+# --- Runtime image (default target) ---
+FROM backend AS runtime
+COPY --from=frontend /frontend/dist static
+RUN useradd --system --no-create-home app
+USER app
+EXPOSE 8000
+# Heroku (and similar hosts) provide the port in $PORT.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
